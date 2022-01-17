@@ -1,0 +1,146 @@
+
+theBoard = {'1': ' ', '2': ' ', '3': ' ',
+               '4': ' ', '5': ' ', '6': ' ',
+               '7': ' ', '8': ' ', '9': ' '}
+
+board_keys = []
+
+for key in theBoard:
+    board_keys.append(key)
+
+print("Tic Tac Toe")
+
+
+def display_board(board):
+   
+    # The function accepts one parameter containing the board's current status
+    # and prints it out to the console.
+    
+    print(board['1'] + '|' + board['2'] + '|' + board['3'])
+    print('-+-+-')
+    print(board['4'] + '|' + board['5'] + '|' + board['6'])
+    print('-+-+-')
+    print(board['7'] + '|' + board['8'] + '|' + board['9'])
+    
+   
+
+
+def enter_move():
+    # The function accepts the board current status, asks the user about their move, 
+    # checks the input and updates the board according to the user's decision.
+    
+    turn = 'X'
+    count = 0
+
+
+# For total number of moves, this function will prompt player X and O to make moves
+    for i in range(10):
+        display_board(theBoard)
+        print("It's your turn, " + turn + ". Move to which place?")
+#Iterate turn between X and O
+        if turn == 'X':
+            turn = 'O'
+
+        else:
+            turn = 'X'
+        move = input()
+        
+        if theBoard[move] == ' ':
+            theBoard[move] = turn
+            count += 1
+        else:
+            print("That place is already filled.\nMove to which place?")
+            continue
+
+    
+    
+        
+   #Once the sum of moves = 5, the program will decide a winner based on 8 conditions         
+      
+        if count >= 5:
+            if theBoard['1'] == theBoard['2'] == theBoard['3'] != ' ': #across the top
+                display_board(theBoard)
+                print('\nGame Over.\n')
+                print(" **** " +turn + " won. ****")
+                break
+        
+            elif theBoard['4'] == theBoard['5'] == theBoard['6'] != ' ': #middle horizontal
+                display_board(theBoard)
+                print('\nGame Over.\n')
+                print(" **** " +turn + " won. ****")
+                break
+        
+            elif theBoard['7'] == theBoard['8'] == theBoard['9'] != ' ': #bottom horizontal
+                display_board(theBoard)
+                print('\nGame Over.\n')
+                print(" **** " +turn + " won. ****")
+                break
+        
+            elif theBoard['1'] == theBoard['4'] == theBoard['7'] != ' ': #left vertical
+                display_board(theBoard)
+                print('\nGame Over.\n')
+                print(" **** " +turn + " won. ****")
+                break
+        
+            elif theBoard['3'] == theBoard['6'] == theBoard['9'] != ' ': #right vertical
+                display_board(theBoard)
+                print('\nGame Over.\n')
+                print(" **** " +turn + " won. ****")
+                break
+
+            elif theBoard['1'] == theBoard['5'] == theBoard['9'] != ' ': #left right diagnol
+                display_board(theBoard)
+                print('\nGame Over.\n')
+                print(" **** " +turn + " won. ****")
+                break
+
+            elif theBoard['3'] == theBoard['5'] == theBoard['7'] != ' ': # right left diagnol
+                display_board(theBoard)
+                print('\nGame Over.\n')
+                print(" **** " +turn + " won. ****")
+                break
+
+            elif theBoard['2'] == theBoard['5'] == theBoard['8'] != ' ': #middle horizontal
+                display_board(theBoard)
+                print('\nGame Over.\n')
+                print(" **** " +turn + " won. ****")
+                break
+
+        #After the above sequence completes, the program will ask to restart
+restart = input("Do you want to play again?(y/n)")
+
+if restart == "y" or restart == 'Y':
+    for key in board_keys:
+        theBoard[key] = ' '
+        enter_move()
+else:
+    quit()
+
+
+enter_move()
+
+       
+
+    #If neither X or O wins and the board is full, this will declare a tie
+if count == 9:
+    print("\nGame Over.\n")
+    print("It's a Tie!")
+
+    restart = input("Do you want to play again?(y/n)")
+    if restart == "y" or restart == 'Y':
+        for key in board_keys:
+            theBoard[key] = ' '
+
+            enter_move()
+
+    #Now we have to change the player after every move
+if turn =='X':
+    turn = 'O'
+
+else:
+    turn = 'X'
+
+
+if __name__ == "__main":
+    enter_move()
+    
