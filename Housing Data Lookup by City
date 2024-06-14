@@ -1,0 +1,27 @@
+import csv
+with open('Zillow_Housing_Data_MI.csv') as csvfile:
+    reader = csv.reader(csvfile)
+
+import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.ticker
+import pandas as pd
+df = pd.read_csv('Zillow_Housing_Data_MI.csv')
+
+from csv import DictReader
+
+#Function for looking up values in CSV
+def Data_Lookup(City):
+    with open('Zillow_Housing_Data_MI.csv') as csvfile:
+        reader = DictReader(csvfile)
+
+        for row in reader:
+
+            # check the arguments against the row
+            if (row['City'] == City):
+                return dict(row)
+            print(row)
+
+
+
+Data_Lookup(str(input("Enter name of City: ")))
