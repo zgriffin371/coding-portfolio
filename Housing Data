@@ -1,0 +1,29 @@
+import csv
+with open('RDC_Inventory_Core_Metrics_Zip_MI_Huds.csv') as csvfile:
+    reader = csv.reader(csvfile)
+
+# import pandas package
+
+import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.ticker
+import pandas as pd
+df = pd.read_csv('RDC_Inventory_Core_Metrics_Zip_MI_Huds.csv')
+
+plt.style.use('bmh')
+
+
+# Bar Chart
+
+    #define x and y axis because there are multiple fields
+
+zipcode = df['postal_code']
+median_listing_price = df['median_listing_price']
+
+    #format chart
+df.groupby([zipcode]).count()
+plt.bar(zipcode, median_listing_price)
+plt.title('Median List Price per Zipcode in Hudsonville')
+plt.xlabel('Zipcode')
+plt.ylabel('Median Listing Price')
+plt.show()
