@@ -1,0 +1,49 @@
+--BASIC DEMONSTRATION OF SQL THAT CAN WORK WITH OTHER AUTOMATION TOOLS TO REGULARLY UPDATE, FOR EXAMPLE, A COST TEAM OF DISTRIBUTION CENTERS ADDED TO *EXISTING* ITEMS IN THE LAST 24 HOURS. COMBINED WITH A GOOGLE APPSCRIPT, THIS WILL MAKE UP THE SUBSTANCE
+OF THE DATA THAT WILL BE SENT VIA EMAIL TO OUR COST TEAM
+
+WITH cust AS (
+SELECT 'US' AS Source, customercode, limsonitemcode, replicate_operation_code, (storage_utc_tmstmp - INTERVAL 4 HOUR) AS storage_est_tmstmp,
+ROW_NUMBER() OVER (PARTITION BY customercode, limsonitemcode ORDER BY storage_utc_tmstmp DESC) AS rn
+FROM ---limson_bos__dbo.ntoutbound` 
+/**/ UNION ALL
+SELECT 'CA' AS Source, customercode, limsonitemcode, replicate_operation_code, (storage_utc_tmstmp - INTERVAL 4 HOUR) AS storage_est_tmstmp,
+ROW_NUMBER() OVER (PARTITION BY customercode, limsonitemcode ORDER BY storage_utc_tmstmp DESC) AS rn
+FROM ---limsoncad_bos__dbo.ntoutbound` 
+--ORDER BY storage_utc_tmstmp DESC
+),
+
+item AS (
+  SELECT 'US' AS Source, limsonitemcode, (storage_utc_tmstmp - INTERVAL 4 HOUR) AS storage_est_tmstmp,
+  ROW_NUMBER() OVER (PARTITION BY ntitid ORDER BY storage_utc_tmstmp) AS rn
+  FROM ---limson_bos__dbo.ntitem`
+/**/ UNION ALL
+  SELECT 'CA' AS Source, limsonitemcode, (storage_utc_tmstmp - INTERVAL 4 HOUR) AS storage_est_tmstmp,
+  ROW_NUMBER() OVER (PARTITION BY ntitid ORDER BY storage_utc_tmstmp) AS rn
+  FROM ---limsoncad_bos__dbo.ntitem`
+),
+
+contact AS (
+SELECT 'US' AS Source, contactid, vendorname
+FROM ---limson_bos__dbo__views_current.ntcontactmod`
+/**/ UNION ALL
+SELECT 'CA' AS Source, contactid, vendorname
+FROM ---limsoncad_bos__dbo__views_current.ntcontactmod`
+)
+
+SELECT cust.Source AS Country, cust.limsonitemcode AS Item, cnt.vendorname AS Customer,
+
+FORMAT_DATETIME('%m-%d-%Y %I:%M:%S %p', cust.storage_est_tmstmp) AS Timestamp,
+FROM cust
+
+LEFT JOIN contact cnt
+  ON cnt.contactid = cust.customercode
+  AND cnt.Source = cust.Source
+
+JOIN item i 
+  ON i.limsonitemcode = cust.limsonitemcode
+  AND i.Source = cust.Source
+  AND i.rn = 1
+
+WHERE cust.replicate_operation_code = 'INSERT'
+AND CAST(cust.storage_est_tmstmp AS DATETIME) > DATETIME_SUB(CURRENT_DATETIME('America/New_York'), INTERVAL 24 HOUR)
+AND CAST(i.storage_est_tmstmp AS DATETIME) < DATETIME_SUB(CURRENT_DATETIME('America/New_York'), INTERVAL 24 HOUR)
