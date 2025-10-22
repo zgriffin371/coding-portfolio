@@ -1,0 +1,92 @@
+--THIS NOTEBOOK INITIATES A SQL QUERY FOR FINANCIAL DATA FROM OUR ERP AND CREATES A CSV. THIS CSV IS DEPOSITED INTO A GCS BUCKET FOR EXTRACTION OF LARGE AMOUNTS OF DATA
+
+import pandas_gbq
+import subprocess
+import os
+from datetime import datetime
+
+
+project = '-----limson-finance'
+bucket_name = '-----limson-finance'
+todays_date_str = datetime.now().strftime("%m-%d-%y")
+gcs_path = f'gs://{bucket_name}/Finance_Exports/Anaplan_Data_{todays_date_str}.csv'
+local_csv = 'exported_data.csv'
+
+
+sql = """
+WITH bp AS (
+  SELECT DISTINCT 'US' AS Source, contactid, vendorname, segmentid,
+  CASE
+    WHEN segmentid = 1 THEN 'Industrial'
+    WHEN vendorname LIKE ('%GFS%') OR
+    vendorname IN ('QUOTA','CUSTOMER SAMPLE USE ONLY','DENVER MIXING CENTER')
+      THEN 'Internal'
+      ELSE 'External'
+  END AS Customer_Type,
+  ROW_NUMBER() OVER (PARTITION BY contactid ORDER BY storage_utc_tmstmp DESC) AS row_num
+  FROM `-----_bos__dbo.ntcontactmod`
+
+UNION ALL
+
+  SELECT DISTINCT 'CA' AS Source, contactid, vendorname, segmentid,
+  CASE
+    WHEN segmentid = 1 THEN 'Industrial'
+    WHEN vendorname LIKE ('%GFS%') OR
+    vendorname IN ('QUOTA','CUSTOMER SAMPLE USE ONLY')
+      THEN 'Internal'
+      ELSE 'External'
+  END AS Customer_Type,
+  ROW_NUMBER() OVER (PARTITION BY contactid ORDER BY storage_utc_tmstmp DESC) AS row_num
+  FROM `-----cad_bos__dbo.ntcontactmod`
+
+)
+
+SELECT DISTINCT
+CONCAT(SO,'-',Item,'-',Lot,'-',ROW_NUMBER() OVER (PARTITION BY Item ORDER BY Lot)) AS Unique,
+Country AS Company,
+dd.fiscal_week_number,
+dd.fiscal_period_number,
+Invoice,
+PickUpDate,
+bp.Customer_Type AS Type,
+Item,
+GFS,
+Description,
+Category,
+Commodity,
+Qty,
+Sales,
+PIP,
+Promo,
+MARGIN
+
+FROM -----limson-finance_Tables.Sales_Margin sm
+
+JOIN `-----edw-prd.edw.d_date` dd
+  ON dd.date = sm.PickUpDate
+
+JOIN bp
+  ON bp.contactid = sm.shipto
+  AND bp.Source = sm.Country
+
+WHERE row_num = 1
+AND fiscal_year_in_progress_ind = 1
+  --COMMENT OUT ABOVE AND ADD THE BELOW FOR END OF FISCAL YEAR--
+--AND sm.PickUpDate >= DATE_SUB(CURRENT_DATE(), INTERVAL 11 DAY)
+AND week_in_progress_ind != 1
+AND PickUpDate < CURRENT_DATE()
+
+
+ORDER BY Country DESC, PickUpDate DESC
+"""
+
+df = pandas_gbq.read_gbq(sql, project_id=project, dialect='standard', location='US',max_results=None)
+df.to_csv(local_csv, index=False)
+print(f"Saved query results to {local_csv}")
+
+
+try:
+    subprocess.run(['gsutil', 'cp', local_csv, gcs_path], check=True)
+    print(f"Uploaded {local_csv} to {gcs_path}")
+except Exception as e:
+    print(f"Failed to upload to GCS: {e}")
